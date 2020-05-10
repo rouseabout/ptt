@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Push-To-Talk Speech Recognition</title>
+</head>
+<body>
+<button id="ptt" style="font-size:1.5em" disabled>Push-To-Talk</button>
+<p id="text" style="font-size:1.5em"></p>
+<p id="error" style="color:red">error: getUserMedia failed</p>
+<script type="text/javascript">
+var pttButton = document.getElementById('ptt');
+var textBox = document.getElementById('text');
+var errorBox = document.getElementById('error');
+var audioCtx, sourceNode, recorderNode, ws;
+function do_ws() {
+    ws = new WebSocket((location.protocol == 'http:' ? 'ws' : 'wss') + '://' + location.host + '/audio');
+    ws.addEventListener('open', function() {
+        errorBox.innerHTML = '&nbsp;';
+    });
+    ws.addEventListener('message', function(event) {
+        var msg = JSON.parse(event.data);
+        textBox.style.color = msg.final ? 'green' : 'orange';
+        textBox.innerHTML = msg.text;
+        if (!msg.final)
+            textBox.innerHTML += ' ...';
+        textBox.innerHTML += ' (' + new Date().toLocaleTimeString() + ')';
+        errorBox.innerHTML = msg.error ? 'error: ' + msg.error : '&nbsp;';
+    });
+    ws.addEventListener('close', function(event) {
+        errorBox.innerHTML = 'error: WebSocket: server connection lost';
+        ws = null;
+        setTimeout(do_ws, 1000);
+    });
+    ws.addEventListener('error', function(event) {
+        errorBox.innerHTML = 'error: WebSocket: ' + event;
+    });
+}
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+if (navigator.getUserMedia) {
+    errorBox.innerHTML = '&nbsp;';
+    pttButton.disabled = false;
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext({sampleRate:16000});
+    navigator.getUserMedia({audio:true}, function(stream) {
+        try {
+            sourceNode = audioCtx.createMediaStreamSource(stream);
+        } catch(error) {
+            errorBox.innerHTML = 'error: createMediaStreamSource: ' + error + '<br/>';
+            pttButton.disabled = true;
+            return;
+        }
+        recorderNode = audioCtx.createScriptProcessor(512, 1, 1);
+        recorderNode.onaudioprocess = function(e) {
+            var samples = Int16Array.from( e.inputBuffer.getChannelData(0).map( x => x * 0x7FFF) );
+            if (ws !== undefined && ws.readyState === WebSocket.OPEN)
+                ws.send(samples);
+        }
+        do_ws();
+    }, function(error) {
+        errorBox.innerHTML = 'error: getUserMedia: ' + error;
+    });
+    pttButton.addEventListener('mousedown', function(event) {
+        if (audioCtx.state == 'suspended')
+            audioCtx.resume();
+        sourceNode.connect(recorderNode);
+        recorderNode.connect(audioCtx.destination);
+    });
+    pttButton.addEventListener('mouseup', function(event) {
+        recorderNode.disconnect(audioCtx.destination);
+        sourceNode.disconnect(recorderNode);
+        if (ws !== undefined && ws.readyState === WebSocket.OPEN)
+            ws.send(new Int16Array([]));
+    });
+}
+</script>
+</body>
+</html>
