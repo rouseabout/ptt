@@ -10,7 +10,7 @@ RUN wget --quiet -O - https://deb.nodesource.com/setup_14.x | bash - && apt-get 
 # install kaldi model
 
 COPY ie.conf ./
-RUN wget --quiet -O - https://goofy.zamia.org/zamia-speech/asr-models/kaldi-generic-en-tdnn_f-r20190609.tar.xz | tar -xJf -
+RUN wget --quiet -O - https://github.com/rouseabout/zamia-speech/raw/master/asr-models/kaldi-generic-en-tdnn_f-r20190609.tar.xz | tar -xJf -
 
 
 # install application and dependencies
