@@ -9,10 +9,18 @@ This is a demonstration of the Kaldi Speech Recognition Toolkit (<https://kaldi-
 
     docker build -t ptt .
 
+or
+
+    podman build -t ptt .
+
 
 ## Container run procedure
 
     docker run -p 80:80 ptt
+
+or
+
+    podman run -p 80:80 ptt
 
 
 ## Test procedure

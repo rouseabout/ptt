@@ -1,4 +1,4 @@
-FROM kaldiasr/kaldi:latest
+FROM docker.io/kaldiasr/kaldi:latest
 
 WORKDIR /usr/src/ptt
 
